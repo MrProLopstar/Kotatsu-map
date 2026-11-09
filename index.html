@@ -13,7 +13,7 @@
   <body>
     <main class="editor">
       <aside class="sidebar">
-        <header class="masthead"><a class="wordmark" href="./" aria-label="Kotatsu карта"><span class="mark">K</span><span>KOTATSU <i>／</i> EVENT MAP</span></a><span class="saved-state" id="save-state"><i></i> СОХРАНЕНО</span></header>
+        <header class="masthead"><a class="wordmark" href="./" aria-label="Карта событий ИТМО"><span class="mark">🍊</span><span>KOTATSU <i>／</i> EVENT MAP</span></a><span class="saved-state" id="save-state"><i></i> СОХРАНЕНО</span></header>
         <div class="project">
           <p class="eyebrow">ЛОМОНОСОВА, 9 · ИТМО</p>
           <label class="event-label" for="event-name">Новое событие</label>
@@ -39,12 +39,13 @@
           <label class="visually-hidden" for="shape-name">Название зоны</label>
           <input id="shape-name" class="shape-name" maxlength="48" placeholder="Название зоны" />
           <div class="shape-tools"><span>ЦВЕТ</span><div id="color-options" class="color-options"></div></div>
-          <p class="edit-hint"><span>↖</span> Перетяните угол · нажмите <b>+</b> на ребре, чтобы добавить точку</p>
+          <p class="edit-hint"><span>↖</span> Тяните заливку, чтобы двигать зону; углы можно менять и добавлять</p>
         </section>
 
         <div class="sidebar-spacer"></div>
         <footer class="sidebar-footer">
           <div class="footer-line"><span class="legend-swatch free"></span><span>Помещения</span><span class="legend-swatch zone"></span><span>Зоны события</span></div>
+          <div class="history-actions"><button id="undo-button" class="quiet-button" disabled title="Отменить · Ctrl+Z">↶ Назад</button><button id="redo-button" class="quiet-button" disabled title="Повторить · Ctrl+Y">↷ Вперёд</button></div>
           <div class="footer-actions"><button id="import-button" class="quiet-button">Импорт</button><button id="export-button" class="export-button">Скачать раскладку <span>↓</span></button><input id="import-file" type="file" accept="application/json,.json" hidden /></div>
           <div class="attribution">План <a href="https://github.com/MrProLopstar/Kotatsu-map" target="_blank" rel="noreferrer">Kotatsu-map</a><span>·</span> навигация ИТМО</div>
           <div class="build-version">Сборка <a id="build-commit" href="https://github.com/MrProLopstar/Kotatsu-map/commits/main" target="_blank" rel="noreferrer">—</a></div>
@@ -58,10 +59,10 @@
         </div>
         <div id="map" aria-label="Карта и план этажей"></div>
         <div id="map-message" class="map-message" role="status" hidden></div>
-        <div class="map-instruction"><span class="instruction-mark">＋</span><span>Создайте зону, затем растяните квадрат за углы</span></div>
+        <div class="map-instruction"><span class="instruction-mark">＋</span><span>Перетаскивайте зону за заливку, углы — для точной формы</span></div>
       </section>
     </main>
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
-    <script src="app.js?v=floor-index-2" defer></script>
+    <script src="app.js?v=zones-history-1" defer></script>
   </body>
 </html>

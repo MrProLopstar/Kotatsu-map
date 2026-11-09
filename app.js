@@ -6,6 +6,51 @@ const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
 let markers = [];
 let labels = [];
+let roomNumberMarkers = [];
+let roomNumberData = [];
+const undoStack = [];
+const redoStack = [];
+
+function snapshot() {
+  return { shapes: structuredClone(state.shapes), selected: state.selected, floor: state.floor, eventName: state.eventName };
+}
+
+function updateHistoryButtons() {
+  $('#undo-button').disabled = !undoStack.length;
+  $('#redo-button').disabled = !redoStack.length;
+}
+
+function recordHistory() {
+  undoStack.push(snapshot());
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack.length = 0;
+  updateHistoryButtons();
+}
+
+function restoreSnapshot(value) {
+  Object.assign(state, structuredClone(value));
+  $('#event-name').value = state.eventName;
+  $('#map-event-label').textContent = state.eventName || 'План события';
+  save();
+  applyFloor();
+  state.selected = value.selected;
+  renderShapes();
+  renderRoomNumbers();
+}
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(snapshot());
+  restoreSnapshot(undoStack.pop());
+  updateHistoryButtons();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(snapshot());
+  restoreSnapshot(redoStack.pop());
+  updateHistoryButtons();
+}
 
 try {
   const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
@@ -66,6 +111,7 @@ function renderShapeEditor() {
   $('#shape-name').value = shape.name;
   $('#color-options').innerHTML = COLORS.map((color) => `<button class="color-swatch ${shape.color === color ? 'active' : ''}" data-color="${color}" style="background:${color}" aria-label="Выбрать цвет"></button>`).join('');
   $('#color-options').querySelectorAll('[data-color]').forEach((button) => button.addEventListener('click', () => {
+    recordHistory();
     shape.color = button.dataset.color;
     save();
     renderShapes();
@@ -88,6 +134,30 @@ function renderLabels() {
   }
 }
 
+function renderRoomNumbers() {
+  roomNumberMarkers.forEach((marker) => marker.remove());
+  roomNumberMarkers = [];
+  if (map.getZoom() < 17) return;
+  for (const feature of roomNumberData) {
+    if (feature.properties.level !== state.floor - 1) continue;
+    const element = document.createElement('span');
+    element.className = 'room-number-label';
+    element.textContent = feature.properties.label;
+    roomNumberMarkers.push(new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(feature.geometry.coordinates).addTo(map));
+  }
+}
+
+async function loadRoomNumbers() {
+  try {
+    const response = await fetch('./data/room-numbers.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    roomNumberData = (await response.json()).features;
+    renderRoomNumbers();
+  } catch (error) {
+    console.warn('Room numbers unavailable', error);
+  }
+}
+
 function renderHandles() {
   clearMarkers();
   const shape = state.shapes.find((item) => item.id === state.selected && item.floor === state.floor);
@@ -97,6 +167,7 @@ function renderHandles() {
     element.className = 'vertex-marker';
     element.setAttribute('aria-label', `Переместить точку ${index + 1}`);
     const marker = new maplibregl.Marker({ element, draggable: true }).setLngLat(coordinate).addTo(map);
+    marker.on('dragstart', recordHistory);
     marker.on('dragend', () => {
       shape.coordinates[index] = marker.getLngLat().toArray();
       save();
@@ -113,6 +184,7 @@ function renderHandles() {
     insert.setAttribute('aria-label', 'Добавить угол на этом ребре');
     insert.addEventListener('click', (event) => {
       event.stopPropagation();
+      recordHistory();
       shape.coordinates.splice(index + 1, 0, midpoint);
       save();
       renderShapes();
@@ -137,6 +209,7 @@ function addSquare() {
     id: crypto.randomUUID(), floor: state.floor, name: `Зона ${String(count).padStart(2, '0')}`, color: COLORS[0],
     coordinates: [[center.lng - dx, center.lat - dy], [center.lng + dx, center.lat - dy], [center.lng + dx, center.lat + dy], [center.lng - dx, center.lat + dy]],
   };
+  recordHistory();
   state.shapes.push(shape);
   state.selected = shape.id;
   save();
@@ -180,6 +253,7 @@ function importLayout(file) {
     try {
       const data = JSON.parse(reader.result);
       if (!data || !Array.isArray(data.shapes)) throw new Error('invalid');
+      recordHistory();
       state.shapes = data.shapes.filter(validShape).slice(0, 200).map((shape) => ({ id: crypto.randomUUID(), floor: shape.floor, name: shape.name.slice(0, 48), color: COLORS.includes(shape.color) ? shape.color : COLORS[0], coordinates: shape.coordinates }));
       $('#event-name').value = typeof data.eventName === 'string' ? data.eventName.slice(0, 80) : '';
       save();
@@ -212,10 +286,49 @@ map.on('load', () => {
   map.on('click', 'event-zone-fill', (event) => { const id = event.features?.[0]?.properties.id; if (id) selectShape(String(id)); });
   map.on('mouseenter', 'event-zone-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'event-zone-fill', () => { map.getCanvas().style.cursor = ''; });
+  map.on('mousedown', 'event-zone-fill', (event) => {
+    const id = String(event.features?.[0]?.properties.id || '');
+    const shape = state.shapes.find((item) => item.id === id && item.floor === state.floor);
+    if (!shape) return;
+    selectShape(id);
+    const original = shape.coordinates.map((point) => [...point]);
+    const origin = map.unproject(event.point).toArray();
+    let moved = false;
+    map.dragPan.disable();
+    map.getCanvas().style.cursor = 'grabbing';
+    const move = (nextEvent) => {
+      const current = map.unproject(nextEvent.point).toArray();
+      const delta = [current[0] - origin[0], current[1] - origin[1]];
+      if (!moved) { recordHistory(); moved = true; }
+      shape.coordinates = original.map(([lng, lat]) => [lng + delta[0], lat + delta[1]]);
+      map.getSource('event-zones').setData(featureCollection());
+      shape.coordinates.forEach((point, index) => {
+        markers[index * 2]?.setLngLat(point);
+        const following = shape.coordinates[(index + 1) % shape.coordinates.length];
+        markers[index * 2 + 1]?.setLngLat([(point[0] + following[0]) / 2, (point[1] + following[1]) / 2]);
+      });
+      const labelIndex = state.shapes.filter((item) => item.floor === state.floor).findIndex((item) => item.id === shape.id);
+      labels[labelIndex]?.setLngLat(polygonCenter(shape.coordinates));
+    };
+    const finish = () => {
+      map.off('mousemove', move);
+      map.off('mouseup', finish);
+      window.removeEventListener('mouseup', finish);
+      map.dragPan.enable();
+      map.getCanvas().style.cursor = '';
+      if (moved) { save(); renderShapes(); }
+    };
+    map.on('mousemove', move);
+    map.on('mouseup', finish);
+    window.addEventListener('mouseup', finish, { once: true });
+    event.preventDefault();
+  });
+  map.on('zoomend', renderRoomNumbers);
+  loadRoomNumbers();
   applyFloor();
   $('#room-count').textContent = 'ПЛАН КОРПУСА';
 });
-document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); }));
+document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); renderRoomNumbers(); }));
 fetch('./build-version.txt').then((response) => response.ok && response.text()).then((sha) => {
   if (sha) {
     const link = $('#build-commit');
@@ -224,15 +337,21 @@ fetch('./build-version.txt').then((response) => response.ok && response.text()).
   }
 }).catch(() => {});
 $('#add-shape').addEventListener('click', addSquare);
+$('#undo-button').addEventListener('click', undo);
+$('#redo-button').addEventListener('click', redo);
+$('#event-name').addEventListener('focus', recordHistory);
 $('#event-name').addEventListener('input', () => { $('#map-event-label').textContent = $('#event-name').value.trim() || 'План события'; $('#save-state').classList.add('unsaved'); save(); });
+$('#shape-name').addEventListener('focus', recordHistory);
 $('#shape-name').addEventListener('input', () => { const shape = state.shapes.find((item) => item.id === state.selected); if (!shape) return; shape.name = $('#shape-name').value.slice(0, 48); save(); map.getSource('event-zones')?.setData(featureCollection()); renderShapeList(); renderLabels(); });
-$('#delete-shape').addEventListener('click', () => { state.shapes = state.shapes.filter((shape) => shape.id !== state.selected); state.selected = null; save(); renderShapes(); });
+$('#delete-shape').addEventListener('click', () => { recordHistory(); state.shapes = state.shapes.filter((shape) => shape.id !== state.selected); state.selected = null; save(); renderShapes(); });
 $('#fit-map').addEventListener('click', () => map.fitBounds(BUILDING.bounds, { padding: { top: 64, right: 36, bottom: 64, left: 36 }, duration: 300, bearing: BUILDING.bearing }));
 $('#help-button').addEventListener('click', () => showMessage('Добавьте зону — квадрат появится по центру карты. Перетяните круглые маркеры, чтобы изменить форму. Нажмите + на ребре, чтобы добавить угол.'));
 $('#export-button').addEventListener('click', exportLayout);
 $('#import-button').addEventListener('click', () => $('#import-file').click());
 $('#import-file').addEventListener('change', (event) => { if (event.target.files[0]) importLayout(event.target.files[0]); event.target.value = ''; });
 document.addEventListener('keydown', (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); redo(); return; }
   if (event.key.toLowerCase() === 'n' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); addSquare(); }
   if (event.key === 'Escape' && state.selected) { state.selected = null; renderShapes(); }
 });
