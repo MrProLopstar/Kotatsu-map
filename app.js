@@ -20,7 +20,7 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: { version: 8, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e7e5dc' } }] },
+  style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e7e5dc' } }] },
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 
