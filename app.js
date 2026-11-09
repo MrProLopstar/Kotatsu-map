@@ -18,17 +18,9 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: './data/itmo-style.json?v=tiles16',
+  style: './data/itmo-style.json?v=floor-index-2',
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
-const pendingIcons = new Set();
-map.on('styleimagemissing', ({ id }) => {
-  if (!/^[\w.-]+$/.test(id) || pendingIcons.has(id)) return;
-  pendingIcons.add(id);
-  map.loadImage(`https://my.itmo.ru/sprites/${encodeURIComponent(id)}.png`).then(({ data }) => {
-    if (!map.hasImage(id)) map.addImage(id, data);
-  }).catch(() => {});
-});
 
 function validShape(shape) {
   return shape && Number.isInteger(shape.floor) && [1, 2].includes(shape.floor) &&
@@ -163,7 +155,7 @@ function applyFloor() {
     const filter = structuredClone(layer.filter);
     const setLevel = (node) => {
       if (!Array.isArray(node)) return;
-      if (node[0] === '==' && node[1] === 'level') node[2] = String(state.floor);
+      if (node[0] === '==' && node[1] === 'level') node[2] = String(state.floor - 1);
       else node.forEach(setLevel);
     };
     setLevel(filter);
