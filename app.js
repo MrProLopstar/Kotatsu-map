@@ -6,10 +6,9 @@ const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
 let markers = [];
 let labels = [];
-let roomNumberMarkers = [];
-let roomNumberData = [];
 const undoStack = [];
 const redoStack = [];
+const localSprites = new Set(['cash', 'amenity.water', 'parking.bike', 'healthcare', 'amenity.restroom.male', 'amenity.restroom.female', 'amenity.restroom.unisex', 'office', 'auditory', 'stairs', 'canteen', 'cloakroom', 'coworking', 'gym', 'library', 'entrance', 'lockerroom.female', 'lockerroom.male', 'studoffice', 'museum', 'conferenceroom', 'default']);
 
 function snapshot() {
   return { shapes: structuredClone(state.shapes), selected: state.selected, floor: state.floor, eventName: state.eventName };
@@ -35,7 +34,6 @@ function restoreSnapshot(value) {
   applyFloor();
   state.selected = value.selected;
   renderShapes();
-  renderRoomNumbers();
 }
 
 function undo() {
@@ -63,9 +61,15 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: './data/itmo-style.json?v=floor-index-2',
+  style: './data/itmo-style.json?v=local-icons-1',
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+map.on('styleimagemissing', ({ id }) => {
+  if (!localSprites.has(id)) return;
+  map.loadImage(`./assets/sprites/${encodeURIComponent(id)}.png`).then(({ data }) => {
+    if (!map.hasImage(id)) map.addImage(id, data);
+  }).catch(() => {});
+});
 
 function validShape(shape) {
   return shape && Number.isInteger(shape.floor) && [1, 2].includes(shape.floor) &&
@@ -131,30 +135,6 @@ function renderLabels() {
     element.className = `zone-label ${shape.id === state.selected ? 'active' : ''}`;
     element.textContent = shape.name || 'Новая зона';
     labels.push(new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(polygonCenter(shape.coordinates)).addTo(map));
-  }
-}
-
-function renderRoomNumbers() {
-  roomNumberMarkers.forEach((marker) => marker.remove());
-  roomNumberMarkers = [];
-  if (map.getZoom() < 17) return;
-  for (const feature of roomNumberData) {
-    if (feature.properties.level !== state.floor - 1) continue;
-    const element = document.createElement('span');
-    element.className = 'room-number-label';
-    element.textContent = feature.properties.label;
-    roomNumberMarkers.push(new maplibregl.Marker({ element, anchor: 'center' }).setLngLat(feature.geometry.coordinates).addTo(map));
-  }
-}
-
-async function loadRoomNumbers() {
-  try {
-    const response = await fetch('./data/room-numbers.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    roomNumberData = (await response.json()).features;
-    renderRoomNumbers();
-  } catch (error) {
-    console.warn('Room numbers unavailable', error);
   }
 }
 
@@ -323,12 +303,10 @@ map.on('load', () => {
     window.addEventListener('mouseup', finish, { once: true });
     event.preventDefault();
   });
-  map.on('zoomend', renderRoomNumbers);
-  loadRoomNumbers();
   applyFloor();
   $('#room-count').textContent = 'ПЛАН КОРПУСА';
 });
-document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); renderRoomNumbers(); }));
+document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); }));
 fetch('./build-version.txt').then((response) => response.ok && response.text()).then((sha) => {
   if (sha) {
     const link = $('#build-commit');
