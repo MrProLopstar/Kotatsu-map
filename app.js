@@ -1,4 +1,3 @@
-const TRANSITIONS_URL = 'https://my.itmo.ru/api/navigator/buildings/273/transition';
 const STORAGE_KEY = 'kotatsu-event-layout-v2';
 const BUILDING = { center: [30.3380443, 59.9266753], bounds: [[30.3366429, 59.9258744], [30.3394456, 59.9274763]], bearing: 216 };
 const COLORS = ['#8fbd9c', '#e5b978', '#e49070', '#a9a0c3', '#83a7bf'];
@@ -170,7 +169,6 @@ function applyFloor() {
     setLevel(filter);
     if (JSON.stringify(filter) !== JSON.stringify(layer.filter)) map.setFilter(layer.id, filter);
   }
-  if (map.getLayer('transition-line')) map.setFilter('transition-line', ['==', ['to-string', ['get', 'level']], String(state.floor)]);
   if (map.getLayer('event-zone-fill')) map.setFilter('event-zone-fill', ['==', ['get', 'floor'], state.floor]);
   if (map.getLayer('event-zone-line')) map.setFilter('event-zone-line', ['==', ['get', 'floor'], state.floor]);
   renderShapes();
@@ -215,24 +213,6 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
-async function addTransitionLayer() {
-  try {
-    const response = await fetch(TRANSITIONS_URL);
-    if (!response.ok) return;
-    const graph = await response.json();
-    const nodes = new Map(graph.features.map((node) => [String(node.properties.id), node]));
-    const features = [];
-    for (const node of graph.features) for (const edge of node.properties.transitions || []) {
-      const target = nodes.get(String(edge.id));
-      if (target && node.properties.level === target.properties.level && node.properties.id < edge.id) features.push({
-        type: 'Feature', geometry: { type: 'LineString', coordinates: [node.geometry.coordinates.slice(0, 2), target.geometry.coordinates.slice(0, 2)] }, properties: { level: node.properties.level },
-      });
-    }
-    map.addSource('transitions', { type: 'geojson', data: { type: 'FeatureCollection', features } });
-    map.addLayer({ id: 'transition-line', type: 'line', source: 'transitions', filter: ['==', ['to-string', ['get', 'level']], String(state.floor)], paint: { 'line-color': '#73867a', 'line-width': 1, 'line-opacity': 0.24, 'line-dasharray': [1.5, 2] } }, 'event-zone-fill');
-  } catch (error) { console.warn('Indoor transitions unavailable', error); }
-}
-
 map.on('load', () => {
   map.addSource('event-zones', { type: 'geojson', data: featureCollection(), promoteId: 'id' });
   map.addLayer({ id: 'event-zone-fill', type: 'fill', source: 'event-zones', filter: ['==', ['get', 'floor'], state.floor], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 0.62, 0.48] } });
@@ -242,7 +222,6 @@ map.on('load', () => {
   map.on('mouseleave', 'event-zone-fill', () => { map.getCanvas().style.cursor = ''; });
   applyFloor();
   $('#room-count').textContent = 'ПЛАН КОРПУСА';
-  addTransitionLayer();
 });
 document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); }));
 $('#add-shape').addEventListener('click', addSquare);
