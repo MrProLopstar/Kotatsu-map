@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f3ef" />
+    <title>Карта события · ИТМО</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="styles.css" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="workspace">
+      <aside class="panel">
+        <header class="brand"><span class="brand-mark">И</span><span>ИТМО <i>·</i> навигация</span><span class="live">РЕДАКТОР</span></header>
+        <div class="intro">
+          <p class="eyebrow">Ломоносова, 9 <span>／</span> корпус 273</p>
+          <h1>План<br />мероприятия</h1>
+          <p class="subhead">Разложите пространство по зонам. Нажмите на помещение на плане и выберите его роль.</p>
+        </div>
+        <label class="field-label" for="event-name">Название события</label>
+        <input id="event-name" class="event-input" maxlength="80" placeholder="Например, День открытых дверей" />
+        <div class="section-heading"><span>Этаж</span><span id="room-count" class="count">—</span></div>
+        <div class="floor-switch" role="group" aria-label="Выбор этажа">
+          <button class="floor-button active" data-floor="1" aria-pressed="true"><b>01</b><span>Первый</span></button>
+          <button class="floor-button" data-floor="2" aria-pressed="false"><b>02</b><span>Второй</span></button>
+        </div>
+        <label class="search-box"><span aria-hidden="true">⌕</span><input id="room-search" type="search" placeholder="Найти помещение" autocomplete="off" /><kbd>/</kbd></label>
+        <section class="room-list-wrap" aria-label="Помещения этажа">
+          <div class="section-heading list-heading"><span>Помещения</span><span id="assigned-count" class="count">0 зон</span></div>
+          <div id="room-list" class="room-list"><div class="loading">Загружаем план…</div></div>
+        </section>
+        <section class="assignment" aria-label="Назначение зоны">
+          <div class="assignment-top"><div><div id="selected-name" class="selected-name">Выберите помещение</div><div id="selected-meta" class="selected-meta">на плане или в списке</div></div><button id="clear-room" class="icon-button" aria-label="Снять выбор" title="Снять выбор">×</button></div>
+          <div id="zone-options" class="zone-options"></div>
+        </section>
+        <footer class="panel-footer"><span id="save-state">Изменения сохраняются в этом браузере</span><div class="footer-actions"><button id="import-button" class="text-button">Импорт</button><button id="export-button" class="export-button">Экспорт раскладки <span>↗</span></button></div><input id="import-file" type="file" accept="application/json,.json" hidden /></footer>
+      </aside>
+      <section class="map-shell" aria-label="План здания">
+        <div class="map-topline"><div class="map-chip"><span class="status-dot"></span><span>Здание корпуса</span><b>273</b></div><button id="fit-map" class="map-action" title="Показать здание целиком">Показать целиком <span>↗</span></button></div>
+        <div id="map" aria-label="Интерактивный план этажа"></div>
+        <div class="map-legend"><span class="legend-item"><i class="legend-room"></i>Свободно</span><span class="legend-item"><i class="legend-assigned"></i>Зона события</span><span class="legend-item"><i class="legend-selected"></i>Выбрано</span></div>
+        <div id="map-message" class="map-message" hidden></div>
+        <div class="map-credit">Карта помещений · <a href="https://github.com/MrProLopstar/Kotatsu-map" target="_blank" rel="noreferrer">Kotatsu-map</a> <span>／</span> basemap © OpenStreetMap</div>
+      </section>
+    </main>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
