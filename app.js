@@ -1,9 +1,8 @@
-const DATA_URL = './data/building_273.geojson';
 const TRANSITIONS_URL = 'https://my.itmo.ru/api/navigator/buildings/273/transition';
 const STORAGE_KEY = 'kotatsu-event-layout-v2';
 const BUILDING = { center: [30.3380443, 59.9266753], bounds: [[30.3366429, 59.9258744], [30.3394456, 59.9274763]], bearing: 216 };
 const COLORS = ['#8fbd9c', '#e5b978', '#e49070', '#a9a0c3', '#83a7bf'];
-const state = { floor: 1, selected: null, shapes: [], roomCounts: {}, eventName: '' };
+const state = { floor: 1, selected: null, shapes: [], eventName: '' };
 const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
 let markers = [];
@@ -20,9 +19,17 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#e7e5dc' } }] },
+  style: './data/itmo-style.json',
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+const pendingIcons = new Set();
+map.on('styleimagemissing', ({ id }) => {
+  if (!/^[\w.-]+$/.test(id) || pendingIcons.has(id)) return;
+  pendingIcons.add(id);
+  map.loadImage(`https://my.itmo.ru/sprites/${encodeURIComponent(id)}.png`).then(({ data }) => {
+    if (!map.hasImage(id)) map.addImage(id, data);
+  }).catch(() => {});
+});
 
 function validShape(shape) {
   return shape && Number.isInteger(shape.floor) && [1, 2].includes(shape.floor) &&
@@ -152,8 +159,17 @@ function applyFloor() {
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
   });
-  if (map.getLayer('room-fill')) map.setFilter('room-fill', ['==', ['to-string', ['get', 'level']], String(state.floor)]);
-  if (map.getLayer('room-line')) map.setFilter('room-line', ['==', ['to-string', ['get', 'level']], String(state.floor)]);
+  for (const layer of map.getStyle().layers) {
+    if (!layer.filter || !layer['source-layer']) continue;
+    const filter = structuredClone(layer.filter);
+    const setLevel = (node) => {
+      if (!Array.isArray(node)) return;
+      if (node[0] === '==' && node[1] === 'level') node[2] = String(state.floor);
+      else node.forEach(setLevel);
+    };
+    setLevel(filter);
+    if (JSON.stringify(filter) !== JSON.stringify(layer.filter)) map.setFilter(layer.id, filter);
+  }
   if (map.getLayer('transition-line')) map.setFilter('transition-line', ['==', ['to-string', ['get', 'level']], String(state.floor)]);
   if (map.getLayer('event-zone-fill')) map.setFilter('event-zone-fill', ['==', ['get', 'floor'], state.floor]);
   if (map.getLayer('event-zone-line')) map.setFilter('event-zone-line', ['==', ['get', 'floor'], state.floor]);
@@ -225,29 +241,10 @@ map.on('load', () => {
   map.on('mouseenter', 'event-zone-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'event-zone-fill', () => { map.getCanvas().style.cursor = ''; });
   applyFloor();
-  loadIndoorPlan();
+  $('#room-count').textContent = 'ПЛАН КОРПУСА';
+  addTransitionLayer();
 });
-
-async function loadIndoorPlan() {
-  try {
-    const response = await fetch(DATA_URL);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const geojson = await response.json();
-    const rooms = geojson.features.filter((feature) => feature.properties?._layer === 'area' && ['room', 'hall', 'corridor', 'stairs', 'toilet', 'elevator'].includes(feature.properties?.class));
-    map.addSource('indoor', { type: 'geojson', data: { type: 'FeatureCollection', features: rooms } });
-    map.addLayer({ id: 'room-fill', type: 'fill', source: 'indoor', filter: ['==', ['to-string', ['get', 'level']], String(state.floor)], paint: { 'fill-color': '#f4f3eb', 'fill-opacity': 0.64 } }, 'event-zone-fill');
-    map.addLayer({ id: 'room-line', type: 'line', source: 'indoor', filter: ['==', ['to-string', ['get', 'level']], String(state.floor)], paint: { 'line-color': '#8e968a', 'line-width': 1.1, 'line-opacity': 0.8 } }, 'event-zone-fill');
-    for (const floor of [1, 2]) state.roomCounts[floor] = rooms.filter((room) => String(room.properties.level) === String(floor)).length;
-    $('#room-count').textContent = `${state.roomCounts[state.floor]} ПОМЕЩЕНИЙ`;
-    addTransitionLayer();
-  } catch (error) {
-    console.error(error);
-    $('#room-count').textContent = 'РУЧНАЯ РАЗМЕТКА';
-    showMessage('План помещения недоступен, но зоны можно создавать и редактировать.');
-  }
-}
-
-document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); $('#room-count').textContent = state.roomCounts[state.floor] ? `${state.roomCounts[state.floor]} ПОМЕЩЕНИЙ` : 'ПЛАН ЗАГРУЖАЕТСЯ'; }));
+document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); }));
 $('#add-shape').addEventListener('click', addSquare);
 $('#event-name').addEventListener('input', () => { $('#map-event-label').textContent = $('#event-name').value.trim() || 'План события'; $('#save-state').classList.add('unsaved'); save(); });
 $('#shape-name').addEventListener('input', () => { const shape = state.shapes.find((item) => item.id === state.selected); if (!shape) return; shape.name = $('#shape-name').value.slice(0, 48); save(); map.getSource('event-zones')?.setData(featureCollection()); renderShapeList(); renderLabels(); });
