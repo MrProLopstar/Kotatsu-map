@@ -61,7 +61,7 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: './data/itmo-style.json?v=local-icons-1',
+  style: './data/itmo-style.json?v=icons-zones-v2',
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 map.on('styleimagemissing', ({ id }) => {
@@ -259,7 +259,7 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 }
 
-map.on('load', () => {
+map.once('style.load', () => {
   map.addSource('event-zones', { type: 'geojson', data: featureCollection(), promoteId: 'id' });
   map.addLayer({ id: 'event-zone-fill', type: 'fill', source: 'event-zones', filter: ['==', ['get', 'floor'], state.floor], paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 0.62, 0.48] } });
   map.addLayer({ id: 'event-zone-line', type: 'line', source: 'event-zones', filter: ['==', ['get', 'floor'], state.floor], paint: { 'line-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#26372c', '#576b59'], 'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 2.2, 1.2] } });
