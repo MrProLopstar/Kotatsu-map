@@ -14,9 +14,15 @@
       "tiles": [
         "https://mbtiles.itmo.su/services/273/tiles/{z}/{x}/{y}.pbf"
       ],
-      "minzoom": 14,
-      "maxzoom": 20,
-      "attribution": "План помещений · Навигатор ИТМО"
+      "minzoom": 16,
+      "maxzoom": 16,
+      "attribution": "План помещений · Навигатор ИТМО",
+      "bounds": [
+        30.3366429,
+        59.9258744,
+        30.3394456,
+        59.9274763
+      ]
     }
   },
   "sprite": "",

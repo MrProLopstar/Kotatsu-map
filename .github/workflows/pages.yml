@@ -25,6 +25,8 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Write build version
+        run: echo "${GITHUB_SHA::7}" > build-version.txt
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .

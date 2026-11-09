@@ -18,7 +18,7 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: './data/itmo-style.json?v=b9bea98',
+  style: './data/itmo-style.json?v=tiles16',
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 const pendingIcons = new Set();
@@ -224,6 +224,13 @@ map.on('load', () => {
   $('#room-count').textContent = 'ПЛАН КОРПУСА';
 });
 document.querySelectorAll('.floor-button').forEach((button) => button.addEventListener('click', () => { state.floor = Number(button.dataset.floor); applyFloor(); }));
+fetch('./build-version.txt').then((response) => response.ok && response.text()).then((sha) => {
+  if (sha) {
+    const link = $('#build-commit');
+    link.textContent = sha.trim();
+    link.href = `https://github.com/MrProLopstar/Kotatsu-map/commit/${sha.trim()}`;
+  }
+}).catch(() => {});
 $('#add-shape').addEventListener('click', addSquare);
 $('#event-name').addEventListener('input', () => { $('#map-event-label').textContent = $('#event-name').value.trim() || 'План события'; $('#save-state').classList.add('unsaved'); save(); });
 $('#shape-name').addEventListener('input', () => { const shape = state.shapes.find((item) => item.id === state.selected); if (!shape) return; shape.name = $('#shape-name').value.slice(0, 48); save(); map.getSource('event-zones')?.setData(featureCollection()); renderShapeList(); renderLabels(); });
