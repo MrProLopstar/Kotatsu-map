@@ -19,7 +19,7 @@ try {
 const map = new maplibregl.Map({
   container: 'map', center: BUILDING.center, zoom: 17.5, bearing: BUILDING.bearing,
   minZoom: 16, maxZoom: 21, maxBounds: [[30.334, 59.923], [30.342, 59.930]],
-  style: './data/itmo-style.json',
+  style: './data/itmo-style.json?v=b9bea98',
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 const pendingIcons = new Set();
