@@ -3,48 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f4f3ef" />
-    <title>Карта события · ИТМО</title>
+    <meta name="theme-color" content="#202824" />
+    <title>Карта события · Kotatsu</title>
     <link rel="preconnect" href="https://unpkg.com" />
-    <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    <link rel="preconnect" href="https://my.itmo.ru" />
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet" />
     <link href="styles.css" rel="stylesheet" />
   </head>
   <body>
-    <main class="workspace">
-      <aside class="panel">
-        <header class="brand"><span class="brand-mark">И</span><span>ИТМО <i>·</i> навигация</span><span class="live">РЕДАКТОР</span></header>
-        <div class="intro">
-          <p class="eyebrow">Ломоносова, 9 <span>／</span> корпус 273</p>
-          <h1>План<br />мероприятия</h1>
-          <p class="subhead">Разложите пространство по зонам. Нажмите на помещение на плане и выберите его роль.</p>
+    <main class="editor">
+      <aside class="sidebar">
+        <header class="masthead"><a class="wordmark" href="./" aria-label="Kotatsu карта"><span class="mark">K</span><span>KOTATSU <i>／</i> EVENT MAP</span></a><span class="saved-state" id="save-state"><i></i> СОХРАНЕНО</span></header>
+        <div class="project">
+          <p class="eyebrow">ПЛАНИРОВАНИЕ · ИТМО</p>
+          <label class="event-label" for="event-name">Новое событие</label>
+          <input id="event-name" class="event-input" maxlength="80" placeholder="Название события" />
+          <p class="address">ул. Ломоносова, 9 <span>·</span> Санкт-Петербург</p>
         </div>
-        <label class="field-label" for="event-name">Название события</label>
-        <input id="event-name" class="event-input" maxlength="80" placeholder="Например, День открытых дверей" />
-        <div class="section-heading"><span>Этаж</span><span id="room-count" class="count">—</span></div>
-        <div class="floor-switch" role="group" aria-label="Выбор этажа">
-          <button class="floor-button active" data-floor="1" aria-pressed="true"><b>01</b><span>Первый</span></button>
-          <button class="floor-button" data-floor="2" aria-pressed="false"><b>02</b><span>Второй</span></button>
+
+        <div class="floor-section">
+          <div class="section-cap"><span>ЭТАЖ</span><span id="room-count">ЗАГРУЗКА ПЛАНА</span></div>
+          <div class="floor-switch" role="group" aria-label="Выбор этажа">
+            <button class="floor-button active" data-floor="1" aria-pressed="true"><b>01</b><span>Первый этаж</span></button>
+            <button class="floor-button" data-floor="2" aria-pressed="false"><b>02</b><span>Второй этаж</span></button>
+          </div>
         </div>
-        <label class="search-box"><span aria-hidden="true">⌕</span><input id="room-search" type="search" placeholder="Найти помещение" autocomplete="off" /><kbd>/</kbd></label>
-        <section class="room-list-wrap" aria-label="Помещения этажа">
-          <div class="section-heading list-heading"><span>Помещения</span><span id="assigned-count" class="count">0 зон</span></div>
-          <div id="room-list" class="room-list"><div class="loading">Загружаем план…</div></div>
+
+        <section class="objects-section" aria-label="Фигуры события">
+          <div class="section-cap"><span>РАЗМЕТКА</span><span id="shape-count">0 ФИГУР</span></div>
+          <button id="add-shape" class="add-shape"><span class="add-icon">＋</span><span><b>Добавить зону</b><small>Квадрат появится в центре карты</small></span><kbd>N</kbd></button>
+          <div id="shape-list" class="shape-list"><p class="empty-state">Добавьте зону, чтобы отметить место встречи, лекции или стойки регистрации.</p></div>
         </section>
-        <section class="assignment" aria-label="Назначение зоны">
-          <div class="assignment-top"><div><div id="selected-name" class="selected-name">Выберите помещение</div><div id="selected-meta" class="selected-meta">на плане или в списке</div></div><button id="clear-room" class="icon-button" aria-label="Снять выбор" title="Снять выбор">×</button></div>
-          <div id="zone-options" class="zone-options"></div>
+
+        <section id="shape-editor" class="shape-editor" hidden>
+          <div class="editor-heading"><span>ПАРАМЕТРЫ ЗОНЫ</span><button id="delete-shape" class="delete-shape" aria-label="Удалить зону" title="Удалить зону">×</button></div>
+          <label class="visually-hidden" for="shape-name">Название зоны</label>
+          <input id="shape-name" class="shape-name" maxlength="48" placeholder="Название зоны" />
+          <div class="shape-tools"><span>ЦВЕТ</span><div id="color-options" class="color-options"></div></div>
+          <p class="edit-hint"><span>↖</span> Перетяните угол · нажмите <b>+</b> на ребре, чтобы добавить точку</p>
         </section>
-        <footer class="panel-footer"><span id="save-state">Изменения сохраняются в этом браузере</span><div class="footer-actions"><button id="import-button" class="text-button">Импорт</button><button id="export-button" class="export-button">Экспорт раскладки <span>↗</span></button></div><input id="import-file" type="file" accept="application/json,.json" hidden /></footer>
+
+        <div class="sidebar-spacer"></div>
+        <footer class="sidebar-footer">
+          <div class="footer-line"><span class="legend-swatch free"></span><span>Помещения</span><span class="legend-swatch zone"></span><span>Зоны события</span></div>
+          <div class="footer-actions"><button id="import-button" class="quiet-button">Импорт</button><button id="export-button" class="export-button">Скачать раскладку <span>↓</span></button><input id="import-file" type="file" accept="application/json,.json" hidden /></div>
+          <div class="attribution">План <a href="https://github.com/MrProLopstar/Kotatsu-map" target="_blank" rel="noreferrer">Kotatsu-map</a><span>·</span> навигация ИТМО</div>
+        </footer>
       </aside>
-      <section class="map-shell" aria-label="План здания">
-        <div class="map-topline"><div class="map-chip"><span class="status-dot"></span><span>Здание корпуса</span><b>273</b></div><button id="fit-map" class="map-action" title="Показать здание целиком">Показать целиком <span>↗</span></button></div>
-        <div id="map" aria-label="Интерактивный план этажа"></div>
-        <div class="map-legend"><span class="legend-item"><i class="legend-room"></i>Свободно</span><span class="legend-item"><i class="legend-assigned"></i>Зона события</span><span class="legend-item"><i class="legend-selected"></i>Выбрано</span></div>
-        <div id="map-message" class="map-message" hidden></div>
-        <div class="map-credit">Карта помещений · <a href="https://github.com/MrProLopstar/Kotatsu-map" target="_blank" rel="noreferrer">Kotatsu-map</a> <span>／</span> basemap © OpenStreetMap</div>
+
+      <section class="map-stage" aria-label="Карта для разметки">
+        <div class="map-toolbar">
+          <div class="map-context"><span class="context-dot"></span><span id="map-event-label">План события</span></div>
+          <div class="map-actions"><button id="fit-map" class="map-button" title="Показать здание целиком">Весь план <span>⌖</span></button><button id="help-button" class="help-button" aria-label="Как работать с зонами" title="Как работать с зонами">?</button></div>
+        </div>
+        <div id="map" aria-label="Карта и план этажей"></div>
+        <div id="map-message" class="map-message" role="status" hidden></div>
+        <div class="map-instruction"><span class="instruction-mark">＋</span><span>Создайте зону, затем растяните квадрат за углы</span></div>
       </section>
     </main>
-    <script type="module" src="app.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+    <script src="app.js" defer></script>
   </body>
 </html>
