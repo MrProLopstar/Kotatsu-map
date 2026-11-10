@@ -3,7 +3,7 @@ const BUILDINGS = window.ITMO_BUILDINGS;
 const COLORS = ['#8fbd9c', '#e5b978', '#e49070', '#a9a0c3', '#83a7bf'];
 const pageParams = new URLSearchParams(location.search);
 const pageHash = new URLSearchParams(location.hash.slice(1));
-const state = { buildingId: 273, floor: 0, viewMode: pageParams.get('view') === '1', sharedView: pageParams.get('view') === '1' && pageHash.has('layout'), selected: null, shapes: [], eventName: '' };
+const state = { buildingId: 273, floor: 0, viewMode: pageParams.get('view') === '1', sharedView: pageParams.get('view') === '1' && (pageHash.has('layout') || pageHash.has('z')), selected: null, shapes: [], eventName: '' };
 const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
 let activeStorageKey = STORAGE_KEY;
@@ -78,15 +78,22 @@ function normalizedShape(shape) {
   return { ...shape, buildingId, floor: legacy ? Number(shape.floor) - 1 : shape.floor };
 }
 
-function loadLayout() {
-  const token = new URLSearchParams(location.hash.slice(1)).get('layout');
+async function loadLayout() {
+  const token = pageHash.get('z') || pageHash.get('layout');
   if (token) {
     try {
-      let encoded = token.replace(/-/g, '+').replace(/_/g, '/');
-      encoded += '='.repeat((4 - encoded.length % 4) % 4);
-      const binary = atob(encoded);
-      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-      const shared = JSON.parse(new TextDecoder().decode(bytes));
+      let shared;
+      if (pageHash.has('z')) {
+        const encoded = token.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(encoded + '='.repeat((4 - encoded.length % 4) % 4)), (char) => char.charCodeAt(0));
+        shared = JSON.parse(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text());
+      } else {
+        let encoded = token.replace(/-/g, '+').replace(/_/g, '/');
+        encoded += '='.repeat((4 - encoded.length % 4) % 4);
+        const binary = atob(encoded);
+        const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+        shared = JSON.parse(new TextDecoder().decode(bytes));
+      }
       if (!shared || !Array.isArray(shared.shapes)) throw new Error('invalid');
       activeShareToken = token;
       activeStorageKey = `${STORAGE_KEY}-share-${token.slice(0, 24)}`;
@@ -164,15 +171,23 @@ function syncViewModeUI() {
 }
 
 $('#building-select').innerHTML = BUILDINGS.map((building) => `<option value="${building.building_id}">${escapeHtml(building.name)}</option>`).join('');
-loadLayout();
+const layoutReady = loadLayout();
 syncViewModeUI();
 const initialBuilding = buildingById();
+const initialFloor = state.floor;
 map = new maplibregl.Map({
   container: 'map', center: [(initialBuilding.bounds[0] + initialBuilding.bounds[2]) / 2, (initialBuilding.bounds[1] + initialBuilding.bounds[3]) / 2], zoom: 17.5, bearing: initialBuilding.bearing,
   minZoom: 15, maxZoom: 21, maxBounds: expandedBounds(initialBuilding),
   style: './data/itmo-style.json?building=273',
   transformRequest: (url, resourceType) => resourceType === 'Tile' && url.includes('/services/273/tiles/')
     ? { url: url.replace('/services/273/tiles/', `/services/${state.buildingId}/tiles/`) } : { url },
+});
+layoutReady.then(() => {
+  syncViewModeUI();
+  if (state.buildingId !== initialBuilding.building_id) setBuilding(state.buildingId);
+  else if (state.floor !== initialFloor) renderFloors();
+  renderShapes();
+  if (map.isStyleLoaded()) applyFloor();
 });
 map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
 map.on('styleimagemissing', ({ id }) => {
@@ -381,11 +396,18 @@ function exportLayout() {
   URL.revokeObjectURL(link.href);
 }
 
-function encodeShareLayout() {
-  const bytes = new TextEncoder().encode(JSON.stringify({ version: 3, buildingId: state.buildingId, floor: state.floor, eventName: state.eventName, shapes: state.shapes }));
+async function encodeShareLayout() {
+  const json = JSON.stringify({ version: 3, buildingId: state.buildingId, floor: state.floor, eventName: $('#event-name').value.trim(), shapes: state.shapes });
+  if (!('CompressionStream' in window)) {
+    const bytes = new TextEncoder().encode(json);
+    let plain = '';
+    for (let index = 0; index < bytes.length; index += 0x8000) plain += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+    return `layout=${btoa(plain).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
+  }
+  const compressed = new Uint8Array(await new Response(new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
   let binary = '';
-  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  for (let index = 0; index < compressed.length; index += 0x8000) binary += String.fromCharCode(...compressed.subarray(index, index + 0x8000));
+  return `z=${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
 }
 
 function shareCacheKey(url) {
@@ -397,7 +419,7 @@ function shareCacheKey(url) {
 async function shareLayout() {
   const url = new URL(location.href);
   url.searchParams.set('view', '1');
-  url.hash = `layout=${encodeShareLayout()}`;
+  url.hash = await encodeShareLayout();
   let link = url.href;
   let shortened = false;
   try {
