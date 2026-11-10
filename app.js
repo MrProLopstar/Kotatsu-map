@@ -54,12 +54,25 @@ function redo() {
   updateHistoryButtons();
 }
 
-function buildingById(id = state.buildingId) { return BUILDINGS.find((building) => building.building_id === Number(id)); }
+function buildingById(id = state.buildingId) { return BUILDINGS.find((building) => Number(building.building_id) === Number(id)); }
+
+function syncBuildingSelection() {
+  const building = buildingById() || buildingById(273) || BUILDINGS[0];
+  if (!building) {
+    $('#room-count').textContent = 'ПЛАН НЕ ЗАГРУЖЕН';
+    showMessage('Не удалось загрузить список корпусов. Обновите страницу.');
+    return null;
+  }
+  state.buildingId = Number(building.building_id);
+  $('#building-select').value = String(state.buildingId);
+  $('#building-name').textContent = `${building.name.toLocaleUpperCase('ru-RU')} · ИТМО`;
+  return building;
+}
 
 function normalizedShape(shape) {
   if (!shape || typeof shape !== 'object') return null;
   const legacy = !Number.isInteger(shape.buildingId);
-  const buildingId = legacy ? 273 : shape.buildingId;
+  const buildingId = legacy ? 273 : Number(shape.buildingId);
   return { ...shape, buildingId, floor: legacy ? Number(shape.floor) - 1 : shape.floor };
 }
 
@@ -77,15 +90,17 @@ function loadLayout() {
       activeStorageKey = `${STORAGE_KEY}-share-${token.slice(0, 24)}`;
       const savedShare = JSON.parse(localStorage.getItem(activeStorageKey) || 'null');
       const layout = savedShare?.shareToken === token && Array.isArray(savedShare.shapes) ? savedShare : shared;
-      if (buildingById(layout.buildingId)) state.buildingId = Number(layout.buildingId);
-      if (buildingById().levels.includes(layout.floor)) state.floor = layout.floor;
+      const layoutBuilding = buildingById(layout.buildingId) || buildingById(273) || BUILDINGS[0];
+      if (layoutBuilding) {
+        state.buildingId = Number(layoutBuilding.building_id);
+        if (layoutBuilding.levels.includes(Number(layout.floor))) state.floor = Number(layout.floor);
+      }
       state.eventName = typeof layout.eventName === 'string' ? layout.eventName.slice(0, 80) : '';
       state.shapes = layout.shapes.map(normalizedShape).filter(validShape).slice(0, 500).map((shape) => ({
         id: typeof shape.id === 'string' ? shape.id : crypto.randomUUID(), buildingId: shape.buildingId, floor: shape.floor,
         name: shape.name.slice(0, 48), color: COLORS.includes(shape.color) ? shape.color : COLORS[0], coordinates: shape.coordinates,
       }));
-      $('#building-select').value = String(state.buildingId);
-      $('#building-name').textContent = `${buildingById().name.toLocaleUpperCase('ru-RU')} · ИТМО`;
+      if (!syncBuildingSelection()) return;
       $('#event-name').value = state.eventName;
       $('#map-event-label').textContent = state.eventName || 'План события';
       return;
@@ -93,13 +108,15 @@ function loadLayout() {
   }
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    if (buildingById(saved.buildingId)) state.buildingId = Number(saved.buildingId);
-    if (buildingById().levels.includes(saved.floor)) state.floor = saved.floor;
+    const savedBuilding = buildingById(saved.buildingId) || buildingById(273) || BUILDINGS[0];
+    if (savedBuilding) {
+      state.buildingId = Number(savedBuilding.building_id);
+      if (savedBuilding.levels.includes(Number(saved.floor))) state.floor = Number(saved.floor);
+    }
     state.eventName = typeof saved.eventName === 'string' ? saved.eventName.slice(0, 80) : '';
     state.shapes = Array.isArray(saved.shapes) ? saved.shapes.map(normalizedShape).filter(validShape).slice(0, 500) : [];
   } catch { localStorage.removeItem(STORAGE_KEY); }
-  $('#building-select').value = String(state.buildingId);
-  $('#building-name').textContent = `${buildingById().name.toLocaleUpperCase('ru-RU')} · ИТМО`;
+  syncBuildingSelection();
   $('#event-name').value = state.eventName;
   $('#map-event-label').textContent = state.eventName || 'План события';
 }
