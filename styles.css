@@ -51,3 +51,4 @@
 :root[data-theme="dark"] .zone-label{border-color:#555c65;background:#262a30ef;color:#e4e7ec}
 :root[data-theme="dark"] .view-mode .event-input{border-color:transparent;background:transparent;padding-left:0;font-weight:600}
 :root[data-theme="dark"] .theme-toggle{color:#e7c878}
+.masthead{flex:0 0 auto}.sidebar{scrollbar-width:thin;scrollbar-color:#bfc1b8 transparent}.sidebar::-webkit-scrollbar{width:8px}.sidebar::-webkit-scrollbar-track{background:transparent}.sidebar::-webkit-scrollbar-thumb{border:2px solid transparent;border-radius:8px;background:#bfc1b8;background-clip:padding-box}.sidebar::-webkit-scrollbar-thumb:hover{background:#969a91;background-clip:padding-box}:root[data-theme="dark"] .sidebar{scrollbar-color:#555b65 transparent}:root[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb{background:#555b65;background-clip:padding-box}:root[data-theme="dark"] .sidebar::-webkit-scrollbar-thumb:hover{background:#747b86;background-clip:padding-box}
