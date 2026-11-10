@@ -147,6 +147,31 @@ function renderFloors() {
     state.floor = Number(button.dataset.floor);
     applyFloor();
   }));
+  renderOccupiedBuildings();
+}
+
+function renderOccupiedBuildings() {
+  const groups = BUILDINGS.map((building) => ({
+    building,
+    levels: building.levels.slice().sort((a, b) => a - b).filter((level) => state.shapes.some((shape) => shape.buildingId === building.building_id && shape.floor === level)),
+  })).filter((group) => group.levels.length);
+  $('#occupied-building-list').innerHTML = groups.length ? groups.map(({ building, levels }) => `
+    <section class="occupied-building">
+      <h3>${escapeHtml(building.name)}</h3>
+      <div class="occupied-floor-list">${levels.map((level) => `<button class="occupied-floor ${building.building_id === state.buildingId && level === state.floor ? 'active' : ''}" data-building="${building.building_id}" data-floor="${level}" aria-pressed="${building.building_id === state.buildingId && level === state.floor}">${level < 0 ? 'Подвал' : `${level + 1}-й этаж`}</button>`).join('')}</div>
+    </section>`).join('') : '<p class="empty-state">Нет занятых корпусов. Вернитесь в редактор и добавьте зоны.</p>';
+  $('#occupied-building-list').querySelectorAll('[data-building][data-floor]').forEach((button) => button.addEventListener('click', () => {
+    const buildingId = Number(button.dataset.building);
+    const floor = Number(button.dataset.floor);
+    if (buildingId !== state.buildingId) {
+      setBuilding(buildingId);
+      state.floor = floor;
+      renderFloors();
+    } else {
+      state.floor = floor;
+      applyFloor();
+    }
+  }));
 }
 
 function featureCollection() {
@@ -409,8 +434,8 @@ $('#export-button').addEventListener('click', exportLayout);
 $('#import-button').addEventListener('click', () => $('#import-file').click());
 $('#import-file').addEventListener('change', (event) => { if (event.target.files[0]) importLayout(event.target.files[0]); event.target.value = ''; });
 document.addEventListener('keydown', (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); redo(); return; }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && !state.viewMode && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y' && !state.viewMode && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); redo(); return; }
   if (event.key.toLowerCase() === 'n' && !state.viewMode && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { event.preventDefault(); addSquare(); }
   if (event.key === 'Escape' && state.selected) { state.selected = null; renderShapes(); }
 });
