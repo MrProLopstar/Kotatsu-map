@@ -413,7 +413,7 @@ async function encodeShareLayout() {
 function shareCacheKey(url) {
   let hash = 2166136261;
   for (let index = 0; index < url.length; index++) hash = Math.imul(hash ^ url.charCodeAt(index), 16777619);
-  return `${STORAGE_KEY}-short-${(hash >>> 0).toString(36)}`;
+  return `${STORAGE_KEY}-short-clck-${(hash >>> 0).toString(36)}`;
 }
 
 async function shareLayout() {
@@ -429,14 +429,14 @@ async function shareLayout() {
       link = cached.shorturl;
       shortened = true;
     } else {
-      const response = await fetch('https://is.gd/create.php', {
+      const response = await fetch('https://clck.ru/--', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams({ format: 'json', url: url.href }),
+        body: new URLSearchParams({ url: url.href }),
       });
-      const result = await response.json();
-      if (!response.ok || result.errorcode || !result.shorturl) throw new Error('Short link unavailable');
-      link = result.shorturl;
+      const shortUrl = (await response.text()).trim();
+      if (!response.ok || !/^https:\/\/clck\.ru\/[A-Za-z0-9]+$/.test(shortUrl)) throw new Error('Short link unavailable');
+      link = shortUrl;
       shortened = true;
       localStorage.setItem(cacheKey, JSON.stringify({ target: url.href, shorturl: link }));
     }
