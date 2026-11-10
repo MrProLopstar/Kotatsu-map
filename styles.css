@@ -14,40 +14,40 @@
 .view-mode .footer-actions{display:flex;justify-content:flex-end}.view-mode #import-button,.view-mode .share-actions,.shared-view #view-mode{display:none}
 .theme-toggle{width:28px;height:28px;flex:none;border:1px solid var(--line);border-radius:3px;background:transparent;color:#657168;font-size:17px;line-height:1;cursor:pointer}.theme-toggle:hover{border-color:var(--green);color:var(--green)}.theme-toggle:focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .masthead{display:grid;grid-template-columns:minmax(0,1fr) 28px max-content;column-gap:8px}.wordmark{min-width:0;font-size:10px}.wordmark>span:last-child{min-width:0}.theme-toggle{width:28px}.saved-state{justify-self:end;white-space:nowrap}
-.sidebar{overflow-y:auto}
-:root[data-theme="dark"]{color-scheme:dark;--ink:#e6ece7;--paper:#202623;--muted:#a8b2ab;--line:#3a453e;--green:#7dbb91;--orange:#ee9265;background:#171c19;color:#e6ece7}
-:root[data-theme="dark"] body{background:#171c19;color:#e6ece7}
-:root[data-theme="dark"] .editor{background:#343d37}
+.sidebar{overflow-y:auto}.project,.building-section,.floor-section,.objects-section,.shape-editor,.sidebar-footer{flex:0 0 auto}.sidebar-spacer{flex:1 0 16px}
+:root[data-theme="dark"]{color-scheme:dark;--ink:#edf0f4;--paper:#22252b;--muted:#a7adb8;--line:#393e47;--green:#8ab694;--orange:#f09161;background:#181a1f;color:#edf0f4}
+:root[data-theme="dark"] body{background:#181a1f;color:#edf0f4}
+:root[data-theme="dark"] .editor{background:#343841}
 :root[data-theme="dark"] .sidebar{background:var(--paper)}
-:root[data-theme="dark"] .map-stage{background:#303833}
+:root[data-theme="dark"] .map-stage{background:#30343c}
 :root[data-theme="dark"] .masthead,:root[data-theme="dark"] .floor-section,:root[data-theme="dark"] .objects-section,:root[data-theme="dark"] .shape-editor,:root[data-theme="dark"] .sidebar-footer{border-color:var(--line)}
-:root[data-theme="dark"] .wordmark,:root[data-theme="dark"] .event-label,:root[data-theme="dark"] .shape-row,:root[data-theme="dark"] .shape-name,:root[data-theme="dark"] .event-input,:root[data-theme="dark"] .building-select{color:#e6ece7}
-:root[data-theme="dark"] .eyebrow,:root[data-theme="dark"] .section-cap,:root[data-theme="dark"] .editor-heading,:root[data-theme="dark"] .shape-tools>span,:root[data-theme="dark"] .address,:root[data-theme="dark"] .footer-line,:root[data-theme="dark"] .empty-state,:root[data-theme="dark"] .attribution,:root[data-theme="dark"] .build-version,:root[data-theme="dark"] .edit-hint{color:#a8b2ab}
-:root[data-theme="dark"] .event-input,:root[data-theme="dark"] .shape-name,:root[data-theme="dark"] .building-select{border-color:#46534b;background:#272e2a}
-:root[data-theme="dark"] .event-input::placeholder,:root[data-theme="dark"] .shape-name::placeholder{color:#8b978f}
-:root[data-theme="dark"] .floor-button{border-color:#46534b;background:#252c28;color:#c2cbc4}
-:root[data-theme="dark"] .floor-button.active,:root[data-theme="dark"] .occupied-floor.active{border-color:#7dbb91;background:#293c30;color:#e3f2e7}
-:root[data-theme="dark"] .add-shape{border-color:#5b916b;background:#293b2f;color:#d8eadc}
-:root[data-theme="dark"] .add-shape:hover{background:#304837}
-:root[data-theme="dark"] .add-shape small,:root[data-theme="dark"] .add-shape kbd{color:#b1c3b4}
-:root[data-theme="dark"] .add-shape kbd,:root[data-theme="dark"] .add-icon{border-color:#506b56}
-:root[data-theme="dark"] .shape-row{border-color:#39443d}
-:root[data-theme="dark"] .shape-row:hover,:root[data-theme="dark"] .shape-row.active{background:#2c342f}
-:root[data-theme="dark"] .delete-shape,:root[data-theme="dark"] .history-actions button{border-color:#46534b;background:transparent;color:#c2cbc4}
-:root[data-theme="dark"] .history-actions button:hover:not(:disabled){border-color:#7dbb91;color:#d8eadc}
-:root[data-theme="dark"] .quiet-button{color:#c1cbc3}
-:root[data-theme="dark"] .export-button{background:#e98759;color:#1d241f}
-:root[data-theme="dark"] .export-button:hover{background:#f19a6c}
-:root[data-theme="dark"] .occupied-floor{border-color:#46534b;background:#252c28;color:#c2cbc4}
-:root[data-theme="dark"] .map-context,:root[data-theme="dark"] .map-button,:root[data-theme="dark"] .help-button,:root[data-theme="dark"] .map-instruction,:root[data-theme="dark"] .map-message{border-color:#48544c;background:#252d29;color:#d9e1db;box-shadow:0 1px 4px #0005}
-:root[data-theme="dark"] .map-button:hover,:root[data-theme="dark"] .help-button:hover{border-color:#7dbb91;color:#d8eadc}
-:root[data-theme="dark"] .maplibregl-ctrl-group{border-color:#46534b!important;background:#252d29!important}
-:root[data-theme="dark"] .maplibregl-ctrl-group button{background-color:#252d29!important}
+:root[data-theme="dark"] .wordmark,:root[data-theme="dark"] .event-label,:root[data-theme="dark"] .shape-row,:root[data-theme="dark"] .shape-name,:root[data-theme="dark"] .event-input,:root[data-theme="dark"] .building-select{color:#e8ebf0}
+:root[data-theme="dark"] .eyebrow,:root[data-theme="dark"] .section-cap,:root[data-theme="dark"] .editor-heading,:root[data-theme="dark"] .shape-tools>span,:root[data-theme="dark"] .address,:root[data-theme="dark"] .footer-line,:root[data-theme="dark"] .empty-state,:root[data-theme="dark"] .attribution,:root[data-theme="dark"] .build-version,:root[data-theme="dark"] .edit-hint{color:#a9afba}
+:root[data-theme="dark"] .event-input,:root[data-theme="dark"] .shape-name,:root[data-theme="dark"] .building-select{border-color:#464b55;background:#282b32}
+:root[data-theme="dark"] .event-input::placeholder,:root[data-theme="dark"] .shape-name::placeholder{color:#939aa6}
+:root[data-theme="dark"] .floor-button{border-color:#454a53;background:#272a31;color:#c8cdd5}
+:root[data-theme="dark"] .floor-button.active,:root[data-theme="dark"] .occupied-floor.active{border-color:#8ab694;background:#2b332f;color:#e9f1eb}
+:root[data-theme="dark"] .add-shape{border-color:#63886e;background:#292e2b;color:#dce9df}
+:root[data-theme="dark"] .add-shape:hover{background:#303733}
+:root[data-theme="dark"] .add-shape small,:root[data-theme="dark"] .add-shape kbd{color:#b8c4bb}
+:root[data-theme="dark"] .add-shape kbd,:root[data-theme="dark"] .add-icon{border-color:#50575a}
+:root[data-theme="dark"] .shape-row{border-color:#383d45}
+:root[data-theme="dark"] .shape-row:hover,:root[data-theme="dark"] .shape-row.active{background:#2a2e35}
+:root[data-theme="dark"] .delete-shape,:root[data-theme="dark"] .history-actions button{border-color:#464b55;background:transparent;color:#c8cdd5}
+:root[data-theme="dark"] .history-actions button:hover:not(:disabled){border-color:#8ab694;color:#dce9df}
+:root[data-theme="dark"] .quiet-button{color:#c8cdd5}
+:root[data-theme="dark"] .export-button{background:#f09161;color:#202329}
+:root[data-theme="dark"] .export-button:hover{background:#f5a174}
+:root[data-theme="dark"] .occupied-floor{border-color:#454a53;background:#272a31;color:#c8cdd5}
+:root[data-theme="dark"] .map-context,:root[data-theme="dark"] .map-button,:root[data-theme="dark"] .help-button,:root[data-theme="dark"] .map-instruction,:root[data-theme="dark"] .map-message{border-color:#454a53;background:#262a30;color:#e0e4ea;box-shadow:0 1px 4px #0005}
+:root[data-theme="dark"] .map-button:hover,:root[data-theme="dark"] .help-button:hover{border-color:#8ab694;color:#e0e9e2}
+:root[data-theme="dark"] .maplibregl-ctrl-group{border-color:#454a53!important;background:#262a30!important}
+:root[data-theme="dark"] .maplibregl-ctrl-group button{background-color:#262a30!important}
 :root[data-theme="dark"] .maplibregl-ctrl-icon{filter:invert(.82)}
-:root[data-theme="dark"] .maplibregl-ctrl-attrib{background:#202623df!important;color:#c6d0c8!important}
-:root[data-theme="dark"] .maplibregl-ctrl-attrib a{color:#d9e1db!important}
-:root[data-theme="dark"] .vertex-marker{border-color:#202623}
-:root[data-theme="dark"] .insert-marker{border-color:#759a7c;background:#252d29;color:#d9e1db}
-:root[data-theme="dark"] .zone-label{border-color:#687b6d;background:#252d29ef;color:#e0e9e2}
+:root[data-theme="dark"] .maplibregl-ctrl-attrib{background:#22252bdf!important;color:#c8cdd5!important}
+:root[data-theme="dark"] .maplibregl-ctrl-attrib a{color:#e0e4ea!important}
+:root[data-theme="dark"] .vertex-marker{border-color:#22252b}
+:root[data-theme="dark"] .insert-marker{border-color:#75827a;background:#262a30;color:#e0e4ea}
+:root[data-theme="dark"] .zone-label{border-color:#555c65;background:#262a30ef;color:#e4e7ec}
 :root[data-theme="dark"] .view-mode .event-input{border-color:transparent;background:transparent;padding-left:0;font-weight:600}
 :root[data-theme="dark"] .theme-toggle{color:#e7c878}
