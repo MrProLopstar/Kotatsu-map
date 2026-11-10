@@ -9,12 +9,15 @@
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="preconnect" href="https://my.itmo.ru" />
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    <link href="styles.css?v=map-rotate-1" rel="stylesheet" />
+    <script>
+      try { document.documentElement.dataset.theme = localStorage.getItem('kotatsu-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); } catch {}
+    </script>
+    <link href="styles.css?v=theme-share-1" rel="stylesheet" />
   </head>
   <body>
     <main class="editor">
       <aside class="sidebar">
-        <header class="masthead"><a class="wordmark" href="./" aria-label="Карта событий ИТМО"><span class="mark">🍊</span><span>KOTATSU <i>／</i> EVENT MAP</span></a><span class="saved-state" id="save-state"><i></i> СОХРАНЕНО</span></header>
+        <header class="masthead"><a class="wordmark" href="./" aria-label="Карта событий ИТМО"><span class="mark">🍊</span><span>KOTATSU <i>／</i> EVENT MAP</span></a><button id="theme-toggle" class="theme-toggle" type="button" aria-label="Включить тёмную тему" aria-pressed="false" title="Тёмная тема">☾</button><span class="saved-state" id="save-state"><i></i> СОХРАНЕНО</span></header>
         <div class="project">
           <p class="eyebrow" id="building-name">ЛОМОНОСОВА, 9 · ИТМО</p>
           <label class="visually-hidden" for="event-name">Название события</label>
@@ -68,6 +71,7 @@
     </main>
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
     <script src="data/buildings.js?v=building-ids-2" defer></script>
-    <script src="app.js?v=map-rotate-1" defer></script>
+    <script src="data/share-config.js?v=1" defer></script>
+    <script src="app.js?v=theme-share-1" defer></script>
   </body>
 </html>

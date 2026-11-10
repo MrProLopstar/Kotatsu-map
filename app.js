@@ -6,6 +6,7 @@ const pageHash = new URLSearchParams(location.hash.slice(1));
 const state = { buildingId: 273, floor: 0, viewMode: pageParams.get('view') === '1', sharedView: pageParams.get('view') === '1' && (pageHash.has('layout') || pageHash.has('z')), selected: null, shapes: [], eventName: '' };
 const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
+const themeButton = $('#theme-toggle');
 let activeStorageKey = STORAGE_KEY;
 let activeShareToken = null;
 let map;
@@ -14,6 +15,20 @@ let labels = [];
 const undoStack = [];
 const redoStack = [];
 const localSprites = new Set(['cash', 'amenity.water', 'parking.bike', 'healthcare', 'amenity.restroom.male', 'amenity.restroom.female', 'amenity.restroom.unisex', 'office', 'auditory', 'stairs', 'canteen', 'cloakroom', 'coworking', 'gym', 'library', 'entrance', 'lockerroom.female', 'lockerroom.male', 'studoffice', 'museum', 'conferenceroom', 'default']);
+
+function setTheme(theme, persist = false) {
+  const dark = theme === 'dark';
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  themeButton.textContent = dark ? '☀' : '☾';
+  themeButton.setAttribute('aria-pressed', String(dark));
+  themeButton.setAttribute('aria-label', dark ? 'Включить светлую тему' : 'Включить тёмную тему');
+  themeButton.title = dark ? 'Светлая тема' : 'Тёмная тема';
+  document.querySelector('meta[name="theme-color"]').content = dark ? '#202623' : '#f7f6f1';
+  if (persist) { try { localStorage.setItem('kotatsu-theme', dark ? 'dark' : 'light'); } catch {} }
+}
+
+setTheme(document.documentElement.dataset.theme || 'light');
+themeButton.addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark', true));
 
 function snapshot() {
   return { shapes: structuredClone(state.shapes), selected: state.selected, buildingId: state.buildingId, floor: state.floor, eventName: state.eventName };
@@ -410,10 +425,11 @@ async function encodeShareLayout() {
   return `z=${btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')}`;
 }
 
-function shareCacheKey(url) {
+function shareCacheKey(url, provider) {
   let hash = 2166136261;
-  for (let index = 0; index < url.length; index++) hash = Math.imul(hash ^ url.charCodeAt(index), 16777619);
-  return `${STORAGE_KEY}-short-clck-${(hash >>> 0).toString(36)}`;
+  const value = `${provider}:${url}`;
+  for (let index = 0; index < value.length; index++) hash = Math.imul(hash ^ value.charCodeAt(index), 16777619);
+  return `${STORAGE_KEY}-short-${(hash >>> 0).toString(36)}`;
 }
 
 async function shareLayout() {
@@ -421,33 +437,48 @@ async function shareLayout() {
   url.searchParams.set('view', '1');
   url.hash = await encodeShareLayout();
   let link = url.href;
-  let shortened = false;
+  let provider = '';
+  const endpoint = ['localhost', '127.0.0.1'].includes(location.hostname) ? '/api/links' : window.KOTATSU_SHARE_API;
+  const cacheKey = shareCacheKey(url.href, endpoint || 'clck.ru');
   try {
-    const cacheKey = shareCacheKey(url.href);
     const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
-    if (cached?.target === url.href && cached.shorturl) {
-      link = cached.shorturl;
-      shortened = true;
-    } else {
-      const response = await fetch('https://clck.ru/--', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body: new URLSearchParams({ url: url.href }),
-      });
-      const shortUrl = (await response.text()).trim();
-      if (!response.ok || !/^https:\/\/clck\.ru\/[A-Za-z0-9]+$/.test(shortUrl)) throw new Error('Short link unavailable');
-      link = shortUrl;
-      shortened = true;
+    if (cached?.target === url.href && cached.shorturl) { link = cached.shorturl; provider = endpoint ? (endpoint.startsWith('/') ? 'локальный сервер' : 'Cloudflare Worker') : 'clck.ru'; }
+  } catch {}
+  if (!provider && endpoint) {
+    try {
+      const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url: url.href }) });
+      const result = await response.json();
+      const shortUrl = new URL(result.shortUrl);
+      if (!response.ok || shortUrl.protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(shortUrl.hostname)) throw new Error('Invalid short URL');
+      link = shortUrl.href;
+      provider = endpoint.startsWith('/') ? 'локальный сервер' : 'Cloudflare Worker';
       localStorage.setItem(cacheKey, JSON.stringify({ target: url.href, shorturl: link }));
-    }
-  } catch {
-    // The full viewer URL remains usable when the short-link service is unavailable.
+    } catch {}
+  }
+  if (!provider) {
+    try {
+      const clckCacheKey = shareCacheKey(url.href, 'clck.ru');
+      const cached = JSON.parse(localStorage.getItem(clckCacheKey) || 'null');
+      if (cached?.target === url.href && cached.shorturl) { link = cached.shorturl; provider = 'clck.ru'; }
+      else {
+        const response = await fetch('https://clck.ru/--', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: new URLSearchParams({ url: url.href }),
+        });
+        const shortUrl = (await response.text()).trim();
+        if (!response.ok || !/^https:\/\/clck\.ru\/[A-Za-z0-9]+$/.test(shortUrl)) throw new Error('Short link unavailable');
+        link = shortUrl;
+        provider = 'clck.ru';
+        localStorage.setItem(clckCacheKey, JSON.stringify({ target: url.href, shorturl: link }));
+      }
+    } catch {}
   }
   try {
     await navigator.clipboard.writeText(link);
-    showMessage(shortened ? 'Короткая ссылка на просмотр скопирована.' : 'Сервис сокращения недоступен; скопирована длинная ссылка.');
+    showMessage(provider ? `Короткая ссылка на просмотр скопирована (${provider}).` : 'Сервис сокращения недоступен; скопирована длинная ссылка.');
   } catch {
-    window.prompt(shortened ? 'Скопируйте короткую ссылку на просмотр:' : 'Скопируйте ссылку на просмотр:', link);
+    window.prompt(provider ? 'Скопируйте короткую ссылку на просмотр:' : 'Скопируйте ссылку на просмотр:', link);
   }
 }
 
