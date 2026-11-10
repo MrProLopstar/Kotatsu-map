@@ -13,6 +13,7 @@
 
 .view-mode .footer-actions{display:flex;justify-content:flex-end}.view-mode #import-button,.view-mode .share-actions,.shared-view #view-mode{display:none}
 .theme-toggle{width:28px;height:28px;flex:none;border:1px solid var(--line);border-radius:3px;background:transparent;color:#657168;font-size:17px;line-height:1;cursor:pointer}.theme-toggle:hover{border-color:var(--green);color:var(--green)}.theme-toggle:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.masthead{display:grid;grid-template-columns:minmax(0,1fr) 28px max-content;column-gap:8px}.wordmark{min-width:0;font-size:10px}.wordmark>span:last-child{min-width:0}.theme-toggle{width:28px}.saved-state{justify-self:end;white-space:nowrap}
 .sidebar{overflow-y:auto}
 :root[data-theme="dark"]{color-scheme:dark;--ink:#e6ece7;--paper:#202623;--muted:#a8b2ab;--line:#3a453e;--green:#7dbb91;--orange:#ee9265;background:#171c19;color:#e6ece7}
 :root[data-theme="dark"] body{background:#171c19;color:#e6ece7}
