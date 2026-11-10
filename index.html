@@ -16,17 +16,18 @@
       <aside class="sidebar">
         <header class="masthead"><a class="wordmark" href="./" aria-label="Карта событий ИТМО"><span class="mark">🍊</span><span>KOTATSU <i>／</i> EVENT MAP</span></a><span class="saved-state" id="save-state"><i></i> СОХРАНЕНО</span></header>
         <div class="project">
-          <p class="eyebrow">ЛОМОНОСОВА, 9 · ИТМО</p>
+          <p class="eyebrow" id="building-name">ЛОМОНОСОВА, 9 · ИТМО</p>
           <label class="event-label" for="event-name">Новое событие</label>
           <input id="event-name" class="event-input" maxlength="80" placeholder="Название события" />
         </div>
 
+        <div class="building-section">
+          <label class="section-cap" for="building-select"><span>КОРПУС</span></label>
+          <select id="building-select" class="building-select" aria-label="Выбрать корпус"></select>
+        </div>
         <div class="floor-section">
           <div class="section-cap"><span>ЭТАЖ</span><span id="room-count">ЗАГРУЗКА ПЛАНА</span></div>
-          <div class="floor-switch" role="group" aria-label="Выбор этажа">
-            <button class="floor-button active" data-floor="1" aria-pressed="true"><b>01</b><span>Первый этаж</span></button>
-            <button class="floor-button" data-floor="2" aria-pressed="false"><b>02</b><span>Второй этаж</span></button>
-          </div>
+          <div id="floor-switch" class="floor-switch" role="group" aria-label="Выбор этажа"></div>
         </div>
 
         <section class="objects-section" aria-label="Фигуры события">
@@ -56,7 +57,7 @@
       <section class="map-stage" aria-label="Карта для разметки">
         <div class="map-toolbar">
           <div class="map-context"><span class="context-dot"></span><span id="map-event-label">План события</span></div>
-          <div class="map-actions"><button id="fit-map" class="map-button" title="Показать здание целиком">Весь план <span>⌖</span></button><button id="help-button" class="help-button" aria-label="Как работать с зонами" title="Как работать с зонами">?</button></div>
+          <div class="map-actions"><button id="view-mode" class="map-button" aria-pressed="false">Просмотр</button><button id="fit-map" class="map-button" title="Показать здание целиком">Весь план <span>⌖</span></button><button id="help-button" class="help-button" aria-label="Как работать с зонами" title="Как работать с зонами">?</button></div>
         </div>
         <div id="map" aria-label="Карта и план этажей"></div>
         <div id="map-message" class="map-message" role="status" hidden></div>
@@ -64,6 +65,7 @@
       </section>
     </main>
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
-    <script src="app.js?v=zone-fix-1" defer></script>
+    <script src="data/buildings.js?v=all-buildings-1" defer></script>
+    <script src="app.js?v=all-buildings-1" defer></script>
   </body>
 </html>
