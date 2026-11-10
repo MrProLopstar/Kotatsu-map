@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://unpkg.com" />
     <link rel="preconnect" href="https://my.itmo.ru" />
     <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet" />
-    <link href="styles.css" rel="stylesheet" />
+    <link href="styles.css?v=share-link-1" rel="stylesheet" />
   </head>
   <body>
     <main class="editor">
@@ -49,6 +49,7 @@
         <footer class="sidebar-footer">
           <div class="footer-line"><span class="legend-swatch free"></span><span>Помещения</span><span class="legend-swatch zone"></span><span>Зоны события</span></div>
           <div class="history-actions"><button id="undo-button" class="quiet-button" disabled title="Отменить · Ctrl+Z">↶ Назад</button><button id="redo-button" class="quiet-button" disabled title="Повторить · Ctrl+Y">↷ Вперёд</button></div>
+          <div class="share-actions"><button id="share-button" class="quiet-button">Скопировать ссылку</button><label><input id="share-as-view" type="checkbox" /> Открыть в просмотре</label></div>
           <div class="footer-actions"><button id="import-button" class="quiet-button">Импорт</button><button id="export-button" class="export-button">Скачать раскладку <span>↓</span></button><input id="import-file" type="file" accept="application/json,.json" hidden /></div>
           <div class="attribution">План <a href="https://github.com/MrProLopstar/Kotatsu-map" target="_blank" rel="noreferrer">Kotatsu-map</a><span>·</span> навигация ИТМО</div>
           <div class="build-version">Сборка <a id="build-commit" href="https://github.com/MrProLopstar/Kotatsu-map/commits/main" target="_blank" rel="noreferrer">—</a></div>
@@ -67,6 +68,6 @@
     </main>
     <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
     <script src="data/buildings.js?v=all-buildings-1" defer></script>
-    <script src="app.js?v=all-buildings-1" defer></script>
+    <script src="app.js?v=share-link-1" defer></script>
   </body>
 </html>

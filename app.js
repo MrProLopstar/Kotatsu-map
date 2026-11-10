@@ -1,9 +1,11 @@
 const STORAGE_KEY = 'kotatsu-event-layout-v2';
 const BUILDINGS = window.ITMO_BUILDINGS;
 const COLORS = ['#8fbd9c', '#e5b978', '#e49070', '#a9a0c3', '#83a7bf'];
-const state = { buildingId: 273, floor: 0, viewMode: false, selected: null, shapes: [], eventName: '' };
+const state = { buildingId: 273, floor: 0, viewMode: new URLSearchParams(location.search).get('view') === '1', selected: null, shapes: [], eventName: '' };
 const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
+let activeStorageKey = STORAGE_KEY;
+let activeShareToken = null;
 let map;
 let markers = [];
 let labels = [];
@@ -33,7 +35,7 @@ function restoreSnapshot(value) {
   $('#event-name').value = state.eventName;
   $('#map-event-label').textContent = state.eventName || 'План события';
   save();
-  if (buildingChanged) setBuilding(state.buildingId); else applyFloor();
+  if (buildingChanged) setBuilding(state.buildingId); else applyFloor(false);
   state.selected = value.selected;
   renderShapes();
 }
@@ -62,11 +64,42 @@ function normalizedShape(shape) {
 }
 
 function loadLayout() {
+  const token = new URLSearchParams(location.hash.slice(1)).get('layout');
+  if (token) {
+    try {
+      let encoded = token.replace(/-/g, '+').replace(/_/g, '/');
+      encoded += '='.repeat((4 - encoded.length % 4) % 4);
+      const binary = atob(encoded);
+      const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+      const shared = JSON.parse(new TextDecoder().decode(bytes));
+      if (!shared || !Array.isArray(shared.shapes)) throw new Error('invalid');
+      activeShareToken = token;
+      activeStorageKey = `${STORAGE_KEY}-share-${token.slice(0, 24)}`;
+      const savedShare = JSON.parse(localStorage.getItem(activeStorageKey) || 'null');
+      const layout = savedShare?.shareToken === token && Array.isArray(savedShare.shapes) ? savedShare : shared;
+      if (buildingById(layout.buildingId)) state.buildingId = Number(layout.buildingId);
+      if (buildingById().levels.includes(layout.floor)) state.floor = layout.floor;
+      state.eventName = typeof layout.eventName === 'string' ? layout.eventName.slice(0, 80) : '';
+      state.shapes = layout.shapes.map(normalizedShape).filter(validShape).slice(0, 500).map((shape) => ({
+        id: typeof shape.id === 'string' ? shape.id : crypto.randomUUID(), buildingId: shape.buildingId, floor: shape.floor,
+        name: shape.name.slice(0, 48), color: COLORS.includes(shape.color) ? shape.color : COLORS[0], coordinates: shape.coordinates,
+      }));
+      $('#building-select').value = String(state.buildingId);
+      $('#building-name').textContent = `${buildingById().name.toLocaleUpperCase('ru-RU')} · ИТМО`;
+      $('#event-name').value = state.eventName;
+      $('#map-event-label').textContent = state.eventName || 'План события';
+      return;
+    } catch { activeStorageKey = STORAGE_KEY; activeShareToken = null; showMessage('В этой ссылке не удалось прочитать раскладку. Открыта локальная версия.'); }
+  }
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    if (buildingById(saved.buildingId)) state.buildingId = Number(saved.buildingId);
+    if (buildingById().levels.includes(saved.floor)) state.floor = saved.floor;
     state.eventName = typeof saved.eventName === 'string' ? saved.eventName.slice(0, 80) : '';
     state.shapes = Array.isArray(saved.shapes) ? saved.shapes.map(normalizedShape).filter(validShape).slice(0, 500) : [];
   } catch { localStorage.removeItem(STORAGE_KEY); }
+  $('#building-select').value = String(state.buildingId);
+  $('#building-name').textContent = `${buildingById().name.toLocaleUpperCase('ru-RU')} · ИТМО`;
   $('#event-name').value = state.eventName;
   $('#map-event-label').textContent = state.eventName || 'План события';
 }
@@ -90,19 +123,28 @@ function setBuilding(id) {
   state.floor = building.levels.includes(state.floor) ? state.floor : (building.levels.includes(0) ? 0 : building.levels[building.levels.length - 1]);
   state.selected = null;
   $('#building-select').value = String(building.building_id);
-  $('#building-name').textContent = building.name.toLocaleUpperCase('ru-RU');
+  $('#building-name').textContent = `${building.name.toLocaleUpperCase('ru-RU')} · ИТМО`;
   clearMarkers();
   labels.forEach((marker) => marker.remove());
   labels = [];
   renderFloors();
+  if (!state.viewMode) save();
   if (map) {
     map.setMaxBounds(expandedBounds(building));
     map.setStyle(`./data/itmo-style.json?building=${building.building_id}`, { diff: false });
   }
 }
 
+function syncViewModeUI() {
+  document.querySelector('.editor').classList.toggle('view-mode', state.viewMode);
+  $('#view-mode').setAttribute('aria-pressed', String(state.viewMode));
+  $('#view-mode').textContent = state.viewMode ? 'Редактирование' : 'Просмотр';
+  $('#event-name').readOnly = state.viewMode;
+}
+
 $('#building-select').innerHTML = BUILDINGS.map((building) => `<option value="${building.building_id}">${escapeHtml(building.name)}</option>`).join('');
 loadLayout();
+syncViewModeUI();
 const initialBuilding = buildingById();
 map = new maplibregl.Map({
   container: 'map', center: [(initialBuilding.bounds[0] + initialBuilding.bounds[2]) / 2, (initialBuilding.bounds[1] + initialBuilding.bounds[3]) / 2], zoom: 17.5, bearing: initialBuilding.bearing,
@@ -128,7 +170,7 @@ function validShape(shape) {
 
 function save() {
   state.eventName = $('#event-name').value.trim();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 3, eventName: state.eventName, shapes: state.shapes }));
+  localStorage.setItem(activeStorageKey, JSON.stringify({ version: 3, shareToken: activeShareToken, buildingId: state.buildingId, floor: state.floor, eventName: state.eventName, shapes: state.shapes }));
   $('#save-state').classList.remove('unsaved');
 }
 
@@ -145,6 +187,7 @@ function renderFloors() {
   $('#floor-switch').innerHTML = levels.length ? levels.map((level) => `<button class="floor-button ${level === state.floor ? 'active' : ''}" data-floor="${level}" aria-pressed="${level === state.floor}"><b>${level < 0 ? '−1' : String(level + 1).padStart(2, '0')}</b><span>${floorCaption(level)}</span></button>`).join('') : '<p class="empty-state floor-empty">В этом корпусе пока нет занятых этажей.</p>';
   $('#floor-switch').querySelectorAll('[data-floor]').forEach((button) => button.addEventListener('click', () => {
     state.floor = Number(button.dataset.floor);
+    if (!state.viewMode) save();
     applyFloor();
   }));
   renderOccupiedBuildings();
@@ -289,7 +332,7 @@ function addSquare() {
   renderShapes();
 }
 
-function applyFloor() {
+function applyFloor(fitToBuilding = true) {
   state.selected = null;
   for (const layer of map.getStyle().layers) {
     if (!layer.filter || !layer['source-layer']) continue;
@@ -307,7 +350,7 @@ function applyFloor() {
   if (map.getLayer('event-zone-line')) map.setFilter('event-zone-line', zoneFilter);
   renderFloors();
   renderShapes();
-  fitMap();
+  if (fitToBuilding) fitMap();
 }
 
 function exportLayout() {
@@ -315,6 +358,26 @@ function exportLayout() {
   const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'event-map-layout.json' });
   link.click();
   URL.revokeObjectURL(link.href);
+}
+
+function encodeShareLayout() {
+  const bytes = new TextEncoder().encode(JSON.stringify({ version: 3, buildingId: state.buildingId, floor: state.floor, eventName: state.eventName, shapes: state.shapes }));
+  let binary = '';
+  for (let index = 0; index < bytes.length; index += 0x8000) binary += String.fromCharCode(...bytes.subarray(index, index + 0x8000));
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function shareLayout() {
+  const url = new URL(location.href);
+  if ($('#share-as-view').checked) url.searchParams.set('view', '1');
+  else url.searchParams.delete('view');
+  url.hash = `layout=${encodeShareLayout()}`;
+  try {
+    await navigator.clipboard.writeText(url.href);
+    showMessage('Ссылка на раскладку скопирована.');
+  } catch {
+    window.prompt('Скопируйте ссылку на раскладку:', url.href);
+  }
 }
 
 function importLayout(file) {
@@ -406,10 +469,7 @@ $('#building-select').addEventListener('change', (event) => setBuilding(event.ta
 $('#view-mode').addEventListener('click', () => {
   const previousFloor = state.floor;
   state.viewMode = !state.viewMode;
-  document.querySelector('.editor').classList.toggle('view-mode', state.viewMode);
-  $('#view-mode').setAttribute('aria-pressed', String(state.viewMode));
-  $('#view-mode').textContent = state.viewMode ? 'Редактирование' : 'Просмотр';
-  $('#event-name').readOnly = state.viewMode;
+  syncViewModeUI();
   renderFloors();
   if (state.floor !== previousFloor) applyFloor(); else renderShapes();
 });
@@ -431,6 +491,7 @@ $('#delete-shape').addEventListener('click', () => { recordHistory(); state.shap
 $('#fit-map').addEventListener('click', fitMap);
 $('#help-button').addEventListener('click', () => showMessage('Добавьте зону — квадрат появится по центру карты. Перетяните круглые маркеры, чтобы изменить форму. Нажмите + на ребре, чтобы добавить угол.'));
 $('#export-button').addEventListener('click', exportLayout);
+$('#share-button').addEventListener('click', shareLayout);
 $('#import-button').addEventListener('click', () => $('#import-file').click());
 $('#import-file').addEventListener('change', (event) => { if (event.target.files[0]) importLayout(event.target.files[0]); event.target.value = ''; });
 document.addEventListener('keydown', (event) => {
