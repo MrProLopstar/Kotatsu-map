@@ -176,7 +176,7 @@ syncViewModeUI();
 const initialBuilding = buildingById();
 const initialFloor = state.floor;
 map = new maplibregl.Map({
-  container: 'map', center: [(initialBuilding.bounds[0] + initialBuilding.bounds[2]) / 2, (initialBuilding.bounds[1] + initialBuilding.bounds[3]) / 2], zoom: 17.5, bearing: initialBuilding.bearing,
+  container: 'map', center: [(initialBuilding.bounds[0] + initialBuilding.bounds[2]) / 2, (initialBuilding.bounds[1] + initialBuilding.bounds[3]) / 2], zoom: 17.5, bearing: initialBuilding.bearing, rotateSpeed: 0.4,
   minZoom: 15, maxZoom: 21, maxBounds: expandedBounds(initialBuilding),
   style: './data/itmo-style.json?building=273',
   transformRequest: (url, resourceType) => resourceType === 'Tile' && url.includes('/services/273/tiles/')
