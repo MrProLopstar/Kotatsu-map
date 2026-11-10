@@ -1,7 +1,9 @@
 const STORAGE_KEY = 'kotatsu-event-layout-v2';
 const BUILDINGS = window.ITMO_BUILDINGS;
 const COLORS = ['#8fbd9c', '#e5b978', '#e49070', '#a9a0c3', '#83a7bf'];
-const state = { buildingId: 273, floor: 0, viewMode: new URLSearchParams(location.search).get('view') === '1', selected: null, shapes: [], eventName: '' };
+const pageParams = new URLSearchParams(location.search);
+const pageHash = new URLSearchParams(location.hash.slice(1));
+const state = { buildingId: 273, floor: 0, viewMode: pageParams.get('view') === '1', sharedView: pageParams.get('view') === '1' && pageHash.has('layout'), selected: null, shapes: [], eventName: '' };
 const $ = (selector) => document.querySelector(selector);
 const mapMessage = $('#map-message');
 let activeStorageKey = STORAGE_KEY;
@@ -154,6 +156,8 @@ function setBuilding(id) {
 
 function syncViewModeUI() {
   document.querySelector('.editor').classList.toggle('view-mode', state.viewMode);
+  document.querySelector('.editor').classList.toggle('shared-view', state.sharedView);
+  $('#view-mode').hidden = state.sharedView;
   $('#view-mode').setAttribute('aria-pressed', String(state.viewMode));
   $('#view-mode').textContent = state.viewMode ? 'Редактирование' : 'Просмотр';
   $('#event-name').readOnly = state.viewMode;
@@ -384,16 +388,44 @@ function encodeShareLayout() {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+function shareCacheKey(url) {
+  let hash = 2166136261;
+  for (let index = 0; index < url.length; index++) hash = Math.imul(hash ^ url.charCodeAt(index), 16777619);
+  return `${STORAGE_KEY}-short-${(hash >>> 0).toString(36)}`;
+}
+
 async function shareLayout() {
   const url = new URL(location.href);
-  if ($('#share-as-view').checked) url.searchParams.set('view', '1');
-  else url.searchParams.delete('view');
+  url.searchParams.set('view', '1');
   url.hash = `layout=${encodeShareLayout()}`;
+  let link = url.href;
+  let shortened = false;
   try {
-    await navigator.clipboard.writeText(url.href);
-    showMessage('Ссылка на раскладку скопирована.');
+    const cacheKey = shareCacheKey(url.href);
+    const cached = JSON.parse(localStorage.getItem(cacheKey) || 'null');
+    if (cached?.target === url.href && cached.shorturl) {
+      link = cached.shorturl;
+      shortened = true;
+    } else {
+      const response = await fetch('https://is.gd/create.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: new URLSearchParams({ format: 'json', url: url.href }),
+      });
+      const result = await response.json();
+      if (!response.ok || result.errorcode || !result.shorturl) throw new Error('Short link unavailable');
+      link = result.shorturl;
+      shortened = true;
+      localStorage.setItem(cacheKey, JSON.stringify({ target: url.href, shorturl: link }));
+    }
   } catch {
-    window.prompt('Скопируйте ссылку на раскладку:', url.href);
+    // The full viewer URL remains usable when the short-link service is unavailable.
+  }
+  try {
+    await navigator.clipboard.writeText(link);
+    showMessage(shortened ? 'Короткая ссылка на просмотр скопирована.' : 'Сервис сокращения недоступен; скопирована длинная ссылка.');
+  } catch {
+    window.prompt(shortened ? 'Скопируйте короткую ссылку на просмотр:' : 'Скопируйте ссылку на просмотр:', link);
   }
 }
 
@@ -441,6 +473,7 @@ map.on('style.load', () => {
   map.on('mouseenter', 'event-zone-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
   map.on('mouseleave', 'event-zone-fill', () => { map.getCanvas().style.cursor = ''; });
   map.on('mousedown', 'event-zone-fill', (event) => {
+    if (state.viewMode) return;
     const id = String(event.features?.[0]?.properties.id || '');
     const shape = state.shapes.find((item) => item.id === id && item.buildingId === state.buildingId && item.floor === state.floor);
     if (!shape) return;
